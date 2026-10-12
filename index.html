@@ -1,0 +1,494 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Equator Protocol | Milestone Escrow Dashboard</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+  <script src="https://unpkg.com/@solana/web3.js@latest/lib/index.iife.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+  <style>
+    body { font-family: 'Plus Jakarta Sans', sans-serif; }
+    code, pre, .font-mono { font-family: 'JetBrains Mono', monospace; }
+    .glass-card {
+      background: rgba(15, 23, 42, 0.72);
+      backdrop-filter: blur(16px);
+      border: 1px solid rgba(255, 255, 255, 0.08);
+    }
+   @media print {
+  @page {
+    size: A4 portrait;
+    margin: 1cm;
+  }
+  
+  html, body {
+    height: auto !important;
+    overflow: hidden !important;
+    background: #ffffff !important;
+  }
+
+  body * {
+    visibility: hidden;
+  }
+
+  #certModal, #certModal * {
+    visibility: visible;
+  }
+
+  #certModal {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100% !important;
+    height: auto !important;
+    background: #ffffff !important;
+    display: block !important;
+    padding: 0 !important;
+    backdrop-filter: none !important;
+  }
+
+  #certModal > div {
+    width: 100% !important;
+    max-width: 100% !important;
+    border: 2px solid #0f172a !important;
+    background: #ffffff !important;
+    color: #0f172a !important;
+    box-shadow: none !important;
+    padding: 2rem !important;
+    border-radius: 10px !important;
+  }
+
+  #certModal > div > div:nth-child(2) {
+    background: #f8fafc !important;
+    border: 1px solid #cbd5e1 !important;
+    color: #0f172a !important;
+    font-size: 13px !important;
+    line-height: 1.9 !important;
+    padding: 1.25rem !important;
+  }
+
+  #certModal h3 {
+    color: #0f172a !important;
+    font-size: 1.25rem !important;
+    font-weight: 800 !important;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+  }
+
+  #certModal button {
+    display: none !important;
+  }
+}
+
+  /* Expand the inner card across the page */
+  #certModal > div {
+    width: 100% !important;
+    max-width: 100% !important;
+    border: 2px solid #0f172a !important;
+    background: #ffffff !important;
+    color: #0f172a !important;
+    box-shadow: none !important;
+    padding: 2.5rem !important;
+    border-radius: 8px !important;
+  }
+
+  /* Formalize the data box */
+  #certModal > div > div:nth-child(2) {
+    background: #f8fafc !important;
+    border: 1px solid #cbd5e1 !important;
+    color: #0f172a !important;
+    font-size: 13px !important;
+    line-height: 2 !important;
+    padding: 1.5rem !important;
+  }
+
+  #certModal h3 {
+    color: #0f172a !important;
+    font-size: 1.25rem !important;
+    font-weight: 800 !important;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+  }
+
+  /* Hide interactive UI buttons when generating PDF/paper */
+  #certModal button {
+    display: none !important;
+  }
+
+  </style>
+</head>
+<body class="bg-[#080d1a] text-slate-100 min-h-screen flex flex-col items-center p-4 sm:p-8 relative selection:bg-teal-500 selection:text-black overflow-x-hidden">
+
+  <!-- Ambient Glow -->
+  <div class="fixed top-0 left-1/4 w-96 h-96 bg-teal-500/10 rounded-full blur-[128px] pointer-events-none"></div>
+  <div class="fixed bottom-0 right-1/4 w-96 h-96 bg-cyan-600/10 rounded-full blur-[128px] pointer-events-none"></div>
+
+  <!-- Header -->
+  <header class="w-full max-w-6xl flex flex-col sm:flex-row sm:items-center justify-between pb-6 border-b border-slate-800/80 gap-4 relative z-10">
+    <div class="flex items-center gap-3">
+      <div class="w-10 h-10 rounded-xl bg-gradient-to-tr from-teal-500 to-cyan-400 flex items-center justify-center shadow-lg shadow-teal-500/20 text-slate-950 font-bold text-xl">
+        ⚡
+      </div>
+      <div>
+        <div class="flex items-center gap-2">
+          <h1 class="text-xl sm:text-2xl font-bold tracking-tight text-white">Equator Protocol</h1>
+          <span class="text-[10px] font-semibold bg-teal-950/80 text-teal-400 border border-teal-500/30 px-2.5 py-0.5 rounded-full tracking-wider uppercase">Devnet</span>
+        </div>
+        <p class="text-xs text-slate-400">Trustless Milestone Escrows & Instant Payouts on Solana</p>
+      </div>
+    </div>
+    
+    <div class="flex items-center gap-3 flex-wrap">
+      <!-- Auto Demo Button -->
+      <button id="btnAutoDemo" onclick="startAutoDemo()" class="flex items-center gap-1.5 bg-slate-900 border border-teal-500/40 hover:bg-slate-800 text-teal-300 text-xs font-semibold px-3 py-2 rounded-xl transition-all shadow-sm">
+        <span>▶</span> Auto Demo Reel
+      </button>
+
+      <!-- Role Toggle -->
+      <div class="bg-slate-950 border border-slate-800 p-1 rounded-xl flex items-center text-xs">
+        <button id="tabClient" onclick="setRole('client')" class="px-3 py-1.5 rounded-lg font-semibold transition-all bg-teal-500 text-slate-950 shadow">
+          Client View
+        </button>
+        <button id="tabContractor" onclick="setRole('contractor')" class="px-3 py-1.5 rounded-lg font-semibold transition-all text-slate-400 hover:text-white">
+          Contractor View
+        </button>
+      </div>
+
+      <!-- Connect Wallet -->
+      <button id="btnConnect" onclick="connectWallet()" class="flex items-center gap-2 bg-gradient-to-r from-teal-400 to-cyan-400 hover:from-teal-300 hover:to-cyan-300 text-slate-950 text-xs sm:text-sm font-semibold px-4 py-2 rounded-xl transition-all shadow-lg shadow-teal-500/20 active:scale-95">
+        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"/></svg>
+        Connect Phantom
+      </button>
+    </div>
+  </header>
+
+  <!-- Live Metrics & Dynamic PDA Inspector -->
+  <section class="w-full max-w-6xl mt-6 relative z-10 grid grid-cols-1 sm:grid-cols-4 gap-3">
+    <div class="glass-card rounded-xl p-3 px-4 border border-white/5">
+      <div class="text-[10px] uppercase font-semibold text-slate-500">Connected Wallet SOL</div>
+      <div id="liveSolBalance" class="text-xs font-bold text-teal-300 font-mono mt-0.5">Not Connected</div>
+    </div>
+    <div class="glass-card rounded-xl p-3 px-4 border border-white/5">
+      <div class="text-[10px] uppercase font-semibold text-slate-500">Derived Escrow PDA</div>
+<a id="pdaExplorerLink" href="https://explorer.solana.com/address/BhsnWm7ZGmR4JmbyuzUYUQsJJqwFuahicQdCCNcYjFtm?cluster=devnet" target="_blank" class="text-xs font-mono text-teal-300 hover:text-teal-200 underline decoration-teal-500/50 flex items-center gap-1.5 mt-0.5 group">
+  <span id="derivedPdaDisplay" class="truncate max-w-[140px] sm:max-w-[200px]">Calculating...</span>
+  <span class="text-[10px] text-teal-400 group-hover:translate-x-0.5 group-hover:-translate-y-0.5 transition-transform">↗</span>
+</a>
+    </div>
+    <div class="glass-card rounded-xl p-3 px-4 border border-white/5">
+      <div class="text-[10px] uppercase font-semibold text-slate-500">Equator Network Fee</div>
+      <div class="text-xs font-bold text-emerald-400 font-mono mt-0.5">~0.000005 SOL ($0.0007)</div>
+    </div>
+    <div class="glass-card rounded-xl p-3 px-4 border border-white/5">
+      <div class="text-[10px] uppercase font-semibold text-slate-500">Settlement Finality</div>
+      <div class="text-xs font-bold text-cyan-300 font-mono mt-0.5">&lt; 400ms (Solana Devnet)</div>
+    </div>
+  </section>
+
+  <!-- Interactive Milestone Roadmap Graph -->
+  <section class="w-full max-w-6xl mt-4 relative z-10">
+    <div class="glass-card rounded-2xl p-4 sm:p-5 shadow-xl border border-white/5">
+      <div class="flex items-center justify-between pb-3 border-b border-slate-800/80 mb-4">
+        <h3 class="text-xs font-bold uppercase tracking-wider text-slate-400">Multi-Stage Milestone Graph</h3>
+        <span class="text-[11px] text-teal-400 font-mono">Contract Architecture: 3-Tier Chaining</span>
+      </div>
+      <div class="grid grid-cols-1 md:grid-cols-3 gap-3">
+        <!-- Milestone 1 -->
+        <div id="m1Card" onclick="selectMilestone(1)" class="bg-slate-950/80 border border-teal-500/40 p-3 rounded-xl flex items-center justify-between cursor-pointer transition-all">
+          <div>
+            <span class="text-[10px] font-bold text-teal-400 uppercase">Milestone 1</span>
+            <div class="text-xs font-semibold text-white mt-0.5">Core Architecture & Deployment</div>
+            <div class="text-[10px] text-slate-500 mt-1">Escrow: 50.00 USDC</div>
+          </div>
+          <span id="m1Badge" class="text-[10px] bg-teal-950 text-teal-300 border border-teal-800 px-2 py-0.5 rounded font-mono">In Progress</span>
+        </div>
+
+        <!-- Milestone 2 -->
+        <div id="m2Card" onclick="selectMilestone(2)" class="bg-slate-950/50 border border-slate-800 p-3 rounded-xl flex items-center justify-between opacity-70 cursor-pointer hover:border-teal-500/30 transition-all">
+          <div>
+            <span class="text-[10px] font-bold text-slate-400 uppercase">Milestone 2</span>
+            <div class="text-xs font-semibold text-white mt-0.5">Frontend Integration & Testing</div>
+            <div class="text-[10px] text-slate-500 mt-1">Escrow: 75.00 USDC</div>
+          </div>
+          <span id="m2Badge" class="text-[10px] bg-slate-900 text-slate-500 border border-slate-800 px-2 py-0.5 rounded font-mono">Queued</span>
+        </div>
+
+        <!-- Milestone 3 -->
+        <div id="m3Card" onclick="selectMilestone(3)" class="bg-slate-950/50 border border-slate-800 p-3 rounded-xl flex items-center justify-between opacity-70 cursor-pointer hover:border-teal-500/30 transition-all">
+          <div>
+            <span class="text-[10px] font-bold text-slate-400 uppercase">Milestone 3</span>
+            <div class="text-xs font-semibold text-white mt-0.5">Security Audit & Final Mainnet</div>
+            <div class="text-[10px] text-slate-500 mt-1">Escrow: 100.00 USDC</div>
+          </div>
+          <span id="m3Badge" class="text-[10px] bg-slate-900 text-slate-500 border border-slate-800 px-2 py-0.5 rounded font-mono">Queued</span>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Stepper Banner -->
+  <section class="w-full max-w-6xl mt-4 relative z-10">
+    <div class="glass-card rounded-2xl p-4 sm:p-5 flex items-center justify-between gap-2 shadow-xl border border-white/5">
+      <div class="flex-1 flex flex-col items-center text-center gap-1.5">
+        <div class="w-8 h-8 rounded-full border border-teal-500/40 bg-teal-500/10 text-teal-300 text-xs font-bold flex items-center justify-center transition-all duration-300" id="stepCircle1">1</div>
+        <span class="text-[11px] font-medium text-slate-400" id="stepLabel1">Initialize</span>
+      </div>
+      <div class="w-8 sm:w-16 h-[2px] bg-slate-800 transition-all duration-300" id="stepLine1"></div>
+
+      <div class="flex-1 flex flex-col items-center text-center gap-1.5">
+        <div class="w-8 h-8 rounded-full border border-slate-700 bg-slate-800 text-slate-400 text-xs font-bold flex items-center justify-center transition-all duration-300" id="stepCircle2">2</div>
+        <span class="text-[11px] font-medium text-slate-500" id="stepLabel2">Fund Vault</span>
+      </div>
+      <div class="w-8 sm:w-16 h-[2px] bg-slate-800 transition-all duration-300" id="stepLine2"></div>
+
+      <div class="flex-1 flex flex-col items-center text-center gap-1.5">
+        <div class="w-8 h-8 rounded-full border border-slate-700 bg-slate-800 text-slate-400 text-xs font-bold flex items-center justify-center transition-all duration-300" id="stepCircle3">3</div>
+        <span class="text-[11px] font-medium text-slate-500" id="stepLabel3">Submit Work</span>
+      </div>
+      <div class="w-8 sm:w-16 h-[2px] bg-slate-800 transition-all duration-300" id="stepLine3"></div>
+
+      <div class="flex-1 flex flex-col items-center text-center gap-1.5">
+        <div class="w-8 h-8 rounded-full border border-slate-700 bg-slate-800 text-slate-400 text-xs font-bold flex items-center justify-center transition-all duration-300" id="stepCircle4">4</div>
+        <span class="text-[11px] font-medium text-slate-500" id="stepLabel4">Release & Settle</span>
+      </div>
+    </div>
+  </section>
+
+  <!-- Main Content Grid -->
+  <main class="w-full max-w-6xl grid grid-cols-1 lg:grid-cols-12 gap-6 mt-6 relative z-10 flex-1">
+    
+    <!-- Left Panel -->
+    <section class="lg:col-span-6 glass-card rounded-2xl p-6 shadow-2xl flex flex-col gap-5 border border-white/5">
+      <div class="flex items-center justify-between pb-3 border-b border-slate-800/80">
+        <div>
+          <h2 id="panelTitle" class="text-sm font-bold uppercase tracking-wider text-slate-200">Client Control Panel</h2>
+          <p id="panelSubtitle" class="text-[11px] text-slate-400">Escrow creation, vault lockup, and release approval</p>
+        </div>
+        <div class="flex items-center gap-2">
+          <button onclick="toggleQrModal()" class="text-[11px] bg-slate-900 border border-slate-700 hover:border-teal-500/50 text-slate-300 px-2.5 py-1 rounded-lg flex items-center gap-1">
+            <span>📱</span> Share Link
+          </button>
+          <span id="badgeStatus" class="text-xs bg-slate-800/80 text-slate-400 px-3 py-1 rounded-full border border-slate-700 font-medium">Idle</span>
+        </div>
+      </div>
+
+      <div class="space-y-3.5">
+        <div>
+          <div class="flex items-center justify-between mb-1">
+  <label class="text-[10px] text-slate-400 font-mono uppercase">Deployed Program ID</label>
+  <a href="https://explorer.solana.com/address/BhsnWm7ZGmR4JmbyuzUYUQsJJqwFuahicQdCCNcYjFtm?cluster=devnet" target="_blank" class="text-[10px] text-teal-400 hover:underline">
+    Explorer Devnet ↗
+  </a>
+</div>
+<div class="w-full bg-slate-950/80 border border-teal-500/30 text-teal-300 font-mono text-xs px-3 py-2 rounded-xl flex items-center justify-between">
+  <span class="truncate">BhsnWm7ZGmR4JmbyuzUYUQsJJqwFuahicQdCCNcYjFtm</span>
+  <span class="text-emerald-400 text-[10px] font-bold bg-emerald-950/80 border border-emerald-800/80 px-1.5 py-0.5 rounded">Active</span>
+</div>
+
+        <div class="grid grid-cols-2 gap-3">
+          <div>
+            <label class="block text-[11px] font-semibold tracking-wide text-slate-400 mb-1 uppercase">Invoice ID (Seed)</label>
+            <input type="text" id="invoiceId" oninput="updateDerivedPda()" value="INV-2026-DEMO_M1" class="w-full bg-slate-950/80 border border-slate-800 focus:border-teal-500/80 text-white text-xs rounded-xl px-3 py-2.5 font-mono outline-none transition-all" />
+          </div>
+          <div>
+            <label class="block text-[11px] font-semibold tracking-wide text-slate-400 mb-1 uppercase">Amount (micro-USDC)</label>
+            <input type="number" id="amount" value="50000000" class="w-full bg-slate-950/80 border border-slate-800 focus:border-teal-500/80 text-white text-xs rounded-xl px-3 py-2.5 font-mono outline-none transition-all" />
+          </div>
+        </div>
+
+        <div>
+          <label class="block text-[11px] font-semibold tracking-wide text-slate-400 mb-1 uppercase">Contractor Public Key</label>
+          <input type="text" id="contractorPubkey" value="4Nd1mBQtrMJydszZp75iV7s8aV3PVD5U6r7tW7qKz3Fq" class="w-full bg-slate-950/80 border border-slate-800 focus:border-teal-500/80 text-white text-xs rounded-xl px-3 py-2.5 font-mono outline-none transition-all" />
+        </div>
+
+        <!-- Deliverable File Dropzone -->
+        <div id="dropzoneContainer" class="p-3 bg-slate-950/60 border border-dashed border-slate-800 rounded-xl flex flex-col items-center justify-center gap-1.5 transition-all">
+          <input type="file" id="fileInput" onchange="handleFile(this.files)" class="hidden" />
+          <div class="text-slate-400 text-xs flex items-center gap-1.5">
+            <span>📎</span> <span id="fileNameDisplay" class="font-medium">Deliverable File Verification</span>
+          </div>
+          <button type="button" onclick="document.getElementById('fileInput').click()" class="text-[11px] text-teal-400 hover:text-teal-300 font-semibold underline cursor-pointer">
+            Select file to generate live SHA-256 hash
+          </button>
+          <div id="fileHashPreview" class="text-[10px] text-slate-500 font-mono break-all text-center hidden"></div>
+        </div>
+      </div>
+
+      <!-- Action Buttons: Client View -->
+      <div id="clientActions" class="flex flex-col gap-3 pt-2">
+        <div class="grid grid-cols-2 gap-3">
+          <button onclick="triggerStep(1)" class="bg-slate-800/80 hover:bg-slate-700/80 active:scale-95 border border-slate-700 text-xs font-semibold py-3 rounded-xl text-slate-200 transition-all flex items-center justify-center gap-1.5">
+            <span>1.</span> Create Agreement
+          </button>
+          <button onclick="triggerStep(2)" class="bg-slate-800/80 hover:bg-slate-700/80 active:scale-95 border border-slate-700 text-xs font-semibold py-3 rounded-xl text-slate-200 transition-all flex items-center justify-center gap-1.5">
+            <span>2.</span> Fund Vault
+          </button>
+        </div>
+        <button onclick="triggerStep(4)" class="w-full bg-gradient-to-r from-teal-500 to-cyan-500 hover:from-teal-400 hover:to-cyan-400 active:scale-95 text-slate-950 text-xs font-bold py-3 rounded-xl transition-all flex items-center justify-center gap-1.5 shadow-lg shadow-teal-500/20">
+          <span>4.</span> Approve & Release Payment
+        </button>
+        <!-- Dispute Hook Button -->
+        <button id="btnDispute" onclick="raiseDispute()" class="w-full bg-rose-950/40 hover:bg-rose-900/40 border border-rose-800/40 text-rose-300 text-xs font-medium py-2 rounded-xl transition-all">
+          ⚠️ Raise Dispute / Freeze for Arbitration
+        </button>
+      </div>
+
+      <!-- Action Buttons: Contractor View -->
+      <div id="contractorActions" class="hidden flex-col gap-3 pt-2">
+        <button onclick="triggerStep(3)" class="w-full bg-gradient-to-r from-purple-500 to-indigo-500 hover:from-purple-400 hover:to-indigo-400 active:scale-95 text-white text-xs font-bold py-3 rounded-xl transition-all flex items-center justify-center gap-2 shadow-lg shadow-purple-500/20">
+          <span>3.</span> Submit Finished Work (On-Chain)
+        </button>
+        <!-- Inactivity Safety Claim Trigger -->
+        <button id="btnClaimTimeout" onclick="claimTimeout()" class="w-full bg-amber-950/50 hover:bg-amber-900/50 border border-amber-800/60 text-amber-300 text-xs font-semibold py-2.5 rounded-xl transition-all flex items-center justify-center gap-2">
+          <span>⚡</span> Claim Timeout Payout (Hatch)
+        </button>
+        <div class="flex items-center justify-between p-3 bg-slate-950/80 border border-slate-800 rounded-xl text-xs">
+          <span class="text-slate-400">Timeout Safety Status:</span>
+          <span id="claimSafetyStatus" class="text-slate-500 font-mono">Locks open upon review timer end</span>
+        </div>
+      </div>
+    </section>
+
+    <!-- Right Panel -->
+    <section class="lg:col-span-6 glass-card rounded-2xl p-6 shadow-2xl flex flex-col border border-white/5">
+      <div class="flex items-center justify-between pb-3 border-b border-slate-800/80">
+        <div>
+          <h2 class="text-sm font-bold uppercase tracking-wider text-slate-200">Settlement Console</h2>
+          <p class="text-[11px] text-slate-400">Deterministic transaction dispatch feed</p>
+        </div>
+        <div class="flex items-center gap-2">
+          <button id="btnViewCert" onclick="toggleCertModal()" class="hidden text-[11px] bg-teal-950/60 border border-teal-800/60 text-teal-300 px-2.5 py-1 rounded-lg hover:bg-teal-900/60 flex items-center gap-1 transition-all">
+            <span>📜</span> View Certificate
+          </button>
+          <span class="inline-flex items-center gap-1.5 text-[11px] text-teal-400 bg-teal-950/60 border border-teal-800/50 px-2.5 py-1 rounded-full font-mono">
+            <span class="w-1.5 h-1.5 rounded-full bg-teal-400 animate-pulse"></span> RPC Devnet
+          </span>
+        </div>
+      </div>
+
+      <!-- Dispute Banner -->
+      <div id="disputeBanner" class="hidden mt-3 p-3 bg-rose-950/60 border border-rose-800/80 rounded-xl flex items-center justify-between">
+        <div class="flex items-center gap-2">
+          <span class="text-rose-400 text-sm">⛔</span>
+          <div>
+            <div class="text-[11px] font-bold text-rose-200">Escrow Frozen in Dispute</div>
+            <div class="text-[10px] text-rose-400/80">Awaiting multi-sig arbitration resolution</div>
+          </div>
+        </div>
+        <button onclick="resolveDispute()" class="text-[10px] bg-slate-900 text-white px-2.5 py-1 rounded border border-rose-700 hover:bg-slate-800">Resolve</button>
+      </div>
+
+      <!-- Timer Banner -->
+      <div id="timerBanner" class="hidden mt-3 p-3 bg-amber-950/40 border border-amber-800/50 rounded-xl flex items-center justify-between">
+        <div class="flex items-center gap-2">
+          <span class="text-amber-400 text-sm">⏳</span>
+          <div>
+            <div class="text-[11px] font-bold text-amber-200">Review Window Countdown</div>
+            <div class="text-[10px] text-amber-400/80">Autonomous contractor claim unlocks at zero</div>
+          </div>
+        </div>
+        <div id="countdownTimer" class="font-mono text-base font-bold text-amber-300">05:00</div>
+      </div>
+
+      <!-- Terminal Output -->
+      <div id="consoleLog" class="bg-slate-950/90 border border-slate-800/80 rounded-xl p-4 mt-3 flex-1 font-mono text-[11px] text-slate-300 overflow-y-auto max-h-60 space-y-2 shadow-inner">
+        <div class="text-slate-500 flex items-center gap-2">
+          <span class="text-teal-500">➜</span> Equator Protocol kernel initialized.
+        </div>
+        <div class="text-slate-500 flex items-center gap-2">
+          <span class="text-teal-500">➜</span> Ready for multi-persona settlement flow.
+        </div>
+      </div>
+
+      <!-- Stat Badges -->
+      <div class="grid grid-cols-2 gap-3 mt-4 pt-4 border-t border-slate-800/80">
+        <div class="bg-slate-950/60 p-3 rounded-xl border border-slate-800/80">
+          <div class="text-[10px] uppercase tracking-wider text-slate-500 font-semibold">Milestone Phase</div>
+          <div id="statPhase" class="text-sm font-bold text-white mt-0.5">Idle</div>
+        </div>
+        <div class="bg-slate-950/60 p-3 rounded-xl border border-slate-800/80">
+          <div class="text-[10px] uppercase tracking-wider text-slate-500 font-semibold">Vault Balance</div>
+          <div id="statVault" class="text-sm font-bold text-teal-400 mt-0.5">0.00 USDC</div>
+        </div>
+      </div>
+    </section>
+
+  </main>
+
+  <!-- Share QR Modal -->
+  <div id="qrModal" class="fixed inset-0 bg-black/80 backdrop-blur-md flex items-center justify-center hidden z-50 p-4">
+    <div class="glass-card rounded-2xl p-6 max-w-sm w-full border border-teal-500/30 flex flex-col items-center gap-4 text-center">
+      <div class="flex items-center justify-between w-full pb-2 border-b border-slate-800">
+        <h3 class="font-bold text-sm text-white">Share Escrow Agreement</h3>
+        <button onclick="toggleQrModal()" class="text-slate-500 hover:text-white">✕</button>
+      </div>
+      <div class="p-4 bg-white rounded-xl shadow-inner" id="qrcode"></div>
+      <div class="text-[11px] text-slate-400 font-mono break-all px-2 bg-slate-950 p-2 rounded-lg border border-slate-800 w-full">
+        solana:pay?reference=INV-2026-DEMO_M1&amount=50
+      </div>
+      <p class="text-[11px] text-slate-400">Scan to load milestone contract parameters in mobile Solana wallets</p>
+    </div>
+  </div>
+
+  <!-- Verification Certificate Modal -->
+  <div id="certModal" class="fixed inset-0 bg-black/80 backdrop-blur-md flex items-center justify-center hidden z-50 p-4">
+    <div class="glass-card rounded-2xl p-6 max-w-lg w-full border border-teal-500/40 flex flex-col gap-4 text-left">
+      <div class="flex items-center justify-between pb-3 border-b border-slate-800">
+        <div class="flex items-center gap-2">
+          <span class="text-teal-400 text-lg">📜</span>
+          <h3 class="font-bold text-sm text-white">On-Chain Deliverable Verification Certificate</h3>
+        </div>
+        <button onclick="toggleCertModal()" class="text-slate-500 hover:text-white">✕</button>
+      </div>
+      <div class="bg-slate-950 p-4 rounded-xl border border-slate-800 font-mono text-[11px] space-y-2 text-slate-300">
+        <div><span class="text-slate-500">Invoice ID:</span> INV-2026-DEMO_M1</div>
+        <div><span class="text-slate-500">Program ID:</span> BhsnWm7ZGmR4JmbyuzUYUQsJJqwFuahicQdCCNcYjFtm</div>
+        <div><span class="text-slate-500">Deliverable Hash:</span> <span id="certHashDisplay" class="text-teal-300 break-all">0x9f83...a12c</span></div>
+        <div><span class="text-slate-500">Settlement Amount:</span> 50,000,000 micro-USDC (50.00 USDC)</div>
+        <div><span class="text-slate-500">Rent Lamports Refunded:</span> 0.002039 SOL (Client Wallet)</div>
+        <div><span class="text-slate-500">Status:</span> <span class="text-emerald-400 font-bold">COMPLETED & RECLAIMED</span></div>
+      </div>
+      <div class="flex justify-end gap-2 pt-2">
+        <button onclick="window.print()" class="bg-slate-800 hover:bg-slate-700 text-white text-xs px-4 py-2 rounded-lg font-medium">Print Certificate</button>
+        <button onclick="toggleCertModal()" class="bg-teal-500 hover:bg-teal-400 text-slate-950 text-xs px-4 py-2 rounded-lg font-semibold">Done</button>
+      </div>
+    </div>
+  </div>
+<!-- Guided Demo Reel Tour Overlay -->
+  <div id="tourOverlay" class="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4 hidden transition-all duration-300">
+    <div class="glass-card border border-teal-500/50 rounded-2xl p-6 max-w-lg w-full shadow-2xl flex flex-col gap-4 text-left relative animate-in fade-in duration-300">
+      
+      <!-- Tour Header -->
+      <div class="flex items-center justify-between pb-3 border-b border-slate-800">
+        <div class="flex items-center gap-2">
+          <span class="w-2.5 h-2.5 rounded-full bg-teal-400 animate-ping"></span>
+          <span class="text-xs font-bold uppercase tracking-wider text-teal-300" id="tourStepBadge">Guided Tour • Intro</span>
+        </div>
+        <button onclick="stopAutoDemo()" class="text-xs text-slate-400 hover:text-white px-2 py-1 rounded bg-slate-900 border border-slate-800">✕ Exit</button>
+      </div>
+
+      <!-- Tour Content -->
+      <div>
+        <h3 class="text-base font-bold text-white mb-1.5" id="tourTitle">Welcome to Equator Protocol</h3>
+        <p class="text-xs text-slate-300 leading-relaxed" id="tourDescription">
+          Equator Protocol is an autonomous milestone settlement engine on Solana. In this automated demo, you'll watch a complete multi-step contract execute on-chain: from non-custodial vault funding to deliverable verification and rent-reclaiming settlement.
+        </p>
+      </div>
+
+      <!-- Interactive Controls -->
+      <div class="flex items-center justify-between pt-2 border-t border-slate-800/80">
+        <span class="text-[11px] font-mono text-slate-500" id="tourProgress">Stage 0 of 4</span>
+        <button id="tourNextBtn" onclick="nextTourStep()" class="bg-gradient-to-r from-teal-400 to-cyan-400 hover:from-teal-300 hover:to-cyan-300 text-slate-950 text-xs font-bold px-4 py-2 rounded-xl transition-all shadow-lg shadow-teal-500/20">
+          Begin Walkthrough →
+        </button>
+      </div>
+
+    </div>
+  </div>
+
+  <script src="app.js"></script>
+</body>
+</html>
