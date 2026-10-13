@@ -1,0 +1,8 @@
+app/* linguist-vendored
+frontend/* linguist-vendored
+dist/* linguist-vendored
+build/* linguist-vendored
+node_modules/* linguist-vendored
+*.html linguist-detectable=false
+*.js linguist-detectable=false
+*.css linguist-detectable=false
